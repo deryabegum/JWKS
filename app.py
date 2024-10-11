@@ -47,16 +47,35 @@ def get_jwks():
 # /auth endpoint to issue a JWT
 @app.route('/auth', methods=['POST'])
 def auth():
-    if not keys:
-        return jsonify({"error": "No keys available"}), 500
-    private_key = keys[0]['private_key']
+    expired = request.args.get('expired') == 'true'
+    
+    if expired:
+        expired_keys = [key for key in keys if time.time() >= key['expiry']]
+        if not expired_keys:
+            return jsonify({"error": "No expired keys available"}), 500
+        key = expired_keys[0]
+    else:
+        valid_keys = [key for key in keys if time.time() < key['expiry']]
+        if not valid_keys:
+            return jsonify({"error": "No valid keys available"}), 500
+        key = valid_keys[0]
+    
+    private_key = key['private_key']
     payload = {
         "sub": "1234567890",
         "name": "John Doe",
-        "iat": time.time()
+        "iat": time.time(),
+        "exp": time.time() - 3600 if expired else time.time() + 3600  # Expire JWT in the past for expired tokens
     }
-    token = jwt.encode(payload, private_key, algorithm="RS256", headers={"kid": "1"})
+    token = jwt.encode(payload, private_key, algorithm="RS256", headers={"kid": key['kid']})
+    
     return jsonify({"token": token})
+
+# New endpoint to generate new keys
+@app.route('/generate_key', methods=['POST'])
+def generate_key():
+    generate_rsa_keypair()
+    return jsonify({"message": "New key generated successfully!"}), 201
 
 if __name__ == '__main__':
     # Generate an initial RSA keypair
@@ -65,4 +84,3 @@ if __name__ == '__main__':
     # Start Flask server
     print("Starting JWKS Server...")
     app.run(port=8080, debug=True)
-
