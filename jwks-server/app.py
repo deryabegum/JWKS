@@ -44,21 +44,22 @@ def get_jwks():
     active_keys = [jwk_from_public_key(key['public_key'], key['kid']) for key in keys if time.time() < key['expiry']]
     return jsonify({"keys": active_keys})
 
-# /auth endpoint to issue a JWT
 @app.route('/auth', methods=['POST'])
 def auth():
     expired = request.args.get('expired') == 'true'
-    
+
     if expired:
         expired_keys = [key for key in keys if time.time() >= key['expiry']]
         if not expired_keys:
             return jsonify({"error": "No expired keys available"}), 500
         key = expired_keys[0]
+        print(f"Expired Key {key['kid']} expires at {key['expiry']} (current time: {time.time()})")
     else:
         valid_keys = [key for key in keys if time.time() < key['expiry']]
         if not valid_keys:
             return jsonify({"error": "No valid keys available"}), 500
         key = valid_keys[0]
+        print(f"Valid Key {key['kid']} expires at {key['expiry']} (current time: {time.time()})")
     
     private_key = key['private_key']
     payload = {
