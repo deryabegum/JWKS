@@ -47,30 +47,31 @@ def get_jwks():
 @app.route('/auth', methods=['POST'])
 def auth():
     expired = request.args.get('expired') == 'true'
-
+    
     if expired:
         expired_keys = [key for key in keys if time.time() >= key['expiry']]
         if not expired_keys:
             return jsonify({"error": "No expired keys available"}), 500
         key = expired_keys[0]
-        print(f"Expired Key {key['kid']} expires at {key['expiry']} (current time: {time.time()})")
     else:
         valid_keys = [key for key in keys if time.time() < key['expiry']]
         if not valid_keys:
             return jsonify({"error": "No valid keys available"}), 500
         key = valid_keys[0]
-        print(f"Valid Key {key['kid']} expires at {key['expiry']} (current time: {time.time()})")
-    
+
     private_key = key['private_key']
+    
     payload = {
         "sub": "1234567890",
         "name": "John Doe",
         "iat": time.time(),
-        "exp": time.time() - 3600 if expired else time.time() + 3600  # Expire JWT in the past for expired tokens
+        "exp": time.time() - 60 if expired else time.time() + 3600  # Expire token for expired=true
     }
+    
     token = jwt.encode(payload, private_key, algorithm="RS256", headers={"kid": key['kid']})
     
     return jsonify({"token": token})
+
 
 # New endpoint to generate new keys
 @app.route('/generate_key', methods=['POST'])
