@@ -20,7 +20,7 @@ def generate_rsa_keypair():
         "private_key": private_key,
         "public_key": public_key,
         "kid": str(len(keys) + 1),  # Incrementing Key ID
-        "expiry": time.time() + 3600  # Keys expire in 1 hour
+        "expiry": time.time() + 60  # Keys expire in 1 minute
     })
 
 # Generate a JWK-compliant dictionary from an RSA public key
